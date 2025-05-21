@@ -1,0 +1,45 @@
+{
+    "name": "e3-development-solutions/quickbooks",
+    "description": "Laravel package for QuickBooks Online integration with Filament support",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "E3 Development Solutions",
+            "email": "eric.erhardt@e3devsolutions.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "laravel/framework": "^10.0|^11.0|^12.0",
+        "intuit/quickbooks-php-sdk": "^3.0",
+        "filament/filament": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "orchestra/testbench": "^8.0",
+        "mockery/mockery": "^1.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "E3DevelopmentSolutions\\QuickBooks\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "E3DevelopmentSolutions\\QuickBooks\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "E3DevelopmentSolutions\\QuickBooks\\QuickBooksServiceProvider"
+            ],
+            "aliases": {
+                "QuickBooks": "E3DevelopmentSolutions\\QuickBooks\\Facades\\QuickBooks"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
