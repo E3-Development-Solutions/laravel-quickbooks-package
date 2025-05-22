@@ -1,5 +1,5 @@
 {
-    "name": "e3-development-solutions/laravel-quickbooks",
+    "name": "e3-development-solutions/laravel-quickbooks-package",
     "description": "Laravel package for QuickBooks Online integration with Filament support",
     "type": "library",
     "license": "MIT",
