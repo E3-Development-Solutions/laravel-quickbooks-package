@@ -1,183 +1,351 @@
-# Laravel QuickBooks Package Architecture
+# Laravel QuickBooks Integration
 
-## Overview
-This document outlines the architecture for the E3-Development-Solutions/quickbooks Laravel package, which integrates QuickBooks Online with Laravel and Filament.
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/e3-development-solutions/quickbooks.svg?style=flat-square)](https://packagist.org/packages/e3-development-solutions/quickbooks)
+[![Total Downloads](https://img.shields.io/packagist/dt/e3-development-solutions/quickbooks.svg?style=flat-square)](https://packagist.org/packages/e3-development-solutions/quickbooks)
 
-## Package Information
-- **Namespace**: E3-Development-Solutions\QuickBooks
-- **Composer Package**: e3-development-solutions/quickbooks
-- **Laravel Version**: 12.x
-- **Filament Version**: 3.x
-- **QuickBooks SDK**: intuit/quickbooks-php-sdk v3
+A Laravel package for integrating QuickBooks Online with your Laravel application, featuring Filament admin panel support.
 
-## Directory Structure
-```
-laravel-quickbooks-package/
-├── src/
-│   ├── Console/
-│   │   └── Commands/
-│   │       └── InstallCommand.php
-│   ├── Exceptions/
-│   │   ├── QuickBooksAuthException.php
-│   │   ├── QuickBooksEntityException.php
-│   │   └── QuickBooksException.php
-│   ├── Http/
-│   │   ├── Controllers/
-│   │   │   └── QuickBooksAuthController.php
-│   │   └── Middleware/
-│   │       └── QuickBooksAuthenticated.php
-│   ├── Models/
-│   │   ├── Customer.php
-│   │   ├── Invoice.php
-│   │   ├── Item.php
-│   │   ├── PurchaseOrder.php
-│   │   └── SalesOrder.php
-│   ├── Services/
-│   │   ├── QuickBooksBaseService.php
-│   │   ├── CustomerService.php
-│   │   ├── InvoiceService.php
-│   │   ├── ItemService.php
-│   │   ├── PurchaseOrderService.php
-│   │   ├── SalesOrderService.php
-│   │   └── Traits/
-│   │       ├── HasQuickBooksCustomer.php
-│   │       ├── HasQuickBooksInvoice.php
-│   │       ├── HasQuickBooksItem.php
-│   │       ├── HasQuickBooksPurchaseOrder.php
-│   │       ├── HasQuickBooksSalesOrder.php
-│   │       └── HasQuickBooksAuthentication.php
-│   ├── Filament/
-│   │   ├── Resources/
-│   │   │   ├── CustomerResource.php
-│   │   │   ├── InvoiceResource.php
-│   │   │   ├── ItemResource.php
-│   │   │   ├── PurchaseOrderResource.php
-│   │   │   └── SalesOrderResource.php
-│   │   └── Pages/
-│   │       ├── Auth/
-│   │       │   └── Connect.php
-│   │       └── Dashboard.php
-│   ├── Facades/
-│   │   └── QuickBooks.php
-│   ├── QuickBooksServiceProvider.php
-│   └── config/
-│       └── quickbooks.php
-├── database/
-│   └── migrations/
-│       └── 2025_05_20_000000_add_quickbooks_fields_to_users_table.php
-├── tests/
-│   ├── Feature/
-│   │   ├── AuthenticationTest.php
-│   │   └── EntityTest.php
-│   └── Unit/
-│       ├── CustomerTest.php
-│       ├── InvoiceTest.php
-│       ├── ItemTest.php
-│       ├── PurchaseOrderTest.php
-│       └── SalesOrderTest.php
-├── composer.json
-└── README.md
+## Features
+
+- OAuth2 authentication with QuickBooks Online
+- Integration with Laravel's authentication system
+- Support for Customer, Invoice, Item, Purchase Order, and Sales Order entities
+- Filament admin panel integration
+- Comprehensive exception handling
+- Configurable settings
+
+## Requirements
+
+- PHP 8.1 or higher
+- Laravel 10.x, 11.x, or 12.x
+- Filament 3.x
+- QuickBooks Online account
+
+## Installation
+
+You can install the package via composer:
+
+```bash
+composer require e3-development-solutions/quickbooks
 ```
 
-## Component Descriptions
+After installing the package, publish the configuration file:
 
-### Service Provider
-The `QuickBooksServiceProvider` will:
-- Register the package configuration
-- Register the package routes
-- Register the package migrations
-- Register the package commands
-- Register the package services
-- Register the package Filament resources
+```bash
+php artisan vendor:publish --provider="E3DevelopmentSolutions\QuickBooks\QuickBooksServiceProvider" --tag="config"
+```
 
-### Authentication Flow
-1. **OAuth2 Authentication**:
-   - Implement OAuth2 flow using the QuickBooks SDK
-   - Store tokens in the user model
-   - Provide refresh token logic
-   - Handle token expiration
+Publish and run the migrations:
 
-2. **User Model Integration**:
-   - Migration to add QuickBooks fields to users table:
-     - `qb_access_token`
-     - `qb_refresh_token`
-     - `qb_token_expires`
-     - `qb_realm_id`
-   - Trait `HasQuickBooksAuthentication` for easy integration
-   - Abstract class for inheritance option
+```bash
+php artisan vendor:publish --provider="E3DevelopmentSolutions\QuickBooks\QuickBooksServiceProvider" --tag="migrations"
+php artisan migrate
+```
 
-### Entity Services
-For each QuickBooks entity (Customer, Invoice, Item, Purchase Order, Sales Order):
-1. **Service Class**:
-   - Extends `QuickBooksBaseService`
-   - Implements CRUD operations
-   - Handles error cases and exceptions
-   - Provides mapping between Laravel and QuickBooks models
+## Configuration
 
-2. **Model Class**:
-   - Represents the QuickBooks entity in Laravel
-   - Provides accessors and mutators for QuickBooks fields
-   - Implements validation rules
+### Environment Variables
 
-3. **Trait**:
-   - For easy integration with existing models
-   - Provides relationship methods
-   - Implements scopes for filtering
+Add the following variables to your `.env` file:
 
-### Filament Integration
-For each QuickBooks entity:
-1. **Resource Class**:
-   - Implements Filament resource for the entity
-   - Provides form fields and validation
-   - Implements table columns and filters
-   - Provides actions for CRUD operations
+```
+QUICKBOOKS_AUTH_MODE=oauth2
+QUICKBOOKS_CLIENT_ID=your-client-id
+QUICKBOOKS_CLIENT_SECRET=your-client-secret
+QUICKBOOKS_REDIRECT_URI=https://your-app.com/quickbooks/callback
+QUICKBOOKS_SCOPE=com.intuit.quickbooks.accounting
+QUICKBOOKS_BASE_URL=
+```
 
-2. **Pages**:
-   - List page for viewing all entities
-   - Create/Edit pages for managing entities
-   - Detail page for viewing entity details
-   - Custom pages for specific operations
+For development, QuickBooks uses a sandbox environment. The base URL will be automatically set based on your application environment:
+- Production: `https://quickbooks.api.intuit.com/`
+- Development/Sandbox: `https://sandbox-quickbooks.api.intuit.com/`
 
-### Configuration
-The `config/quickbooks.php` file will include:
-- Authentication settings
-- API endpoints
-- Entity mappings
-- Customization options
+### QuickBooks Developer Account
 
-### Migrations
-The package will include migrations for:
-- Adding QuickBooks fields to users table
-- Creating tables for storing QuickBooks entity mappings (if needed)
+1. Sign up for a [QuickBooks Developer account](https://developer.intuit.com/)
+2. Create a new app in the developer dashboard
+3. Set the redirect URI to match your `QUICKBOOKS_REDIRECT_URI` environment variable
+4. Copy the Client ID and Client Secret to your `.env` file
 
-### Facades
-The `QuickBooks` facade will provide easy access to:
-- Authentication methods
-- Entity services
-- Utility methods
+## User Model Integration
 
-## Implementation Plan
+### Using the Trait
 
-### Phase 1: Core Infrastructure
-1. Set up package structure
-2. Implement service provider
-3. Create configuration file
-4. Implement base authentication service
-5. Create user model integration
+Add the `HasQuickBooksAuthentication` trait to your User model:
 
-### Phase 2: Entity Services
-1. Implement Customer service and model
-2. Implement Invoice service and model
-3. Implement Item service and model
-4. Implement Purchase Order service and model
-5. Implement Sales Order service and model
+```php
+<?php
 
-### Phase 3: Filament Integration
-1. Create base Filament resource
-2. Implement entity-specific resources
-3. Create custom pages for authentication and operations
+namespace App\Models;
 
-### Phase 4: Testing and Documentation
-1. Write unit tests for all components
-2. Create comprehensive documentation
-3. Provide usage examples
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use E3DevelopmentSolutions\QuickBooks\Services\Traits\HasQuickBooksAuthentication;
+
+class User extends Authenticatable
+{
+    use HasQuickBooksAuthentication;
+    
+    // ...
+}
+```
+
+### Database Fields
+
+The package adds the following fields to your users table:
+
+- `qb_access_token` - The QuickBooks access token
+- `qb_refresh_token` - The QuickBooks refresh token
+- `qb_token_expires` - When the access token expires
+- `qb_realm_id` - The QuickBooks company ID
+
+## Basic Usage
+
+### Authentication
+
+#### Connect to QuickBooks
+
+To connect a user to QuickBooks, redirect them to the connect route:
+
+```php
+return redirect()->route('quickbooks.connect');
+```
+
+This will redirect the user to the QuickBooks authorization page. After authorizing, they will be redirected back to your application.
+
+#### Check Connection Status
+
+You can check if a user is connected to QuickBooks:
+
+```php
+if (auth()->user()->isConnectedToQuickBooks()) {
+    // User is connected
+}
+```
+
+#### Disconnect from QuickBooks
+
+To disconnect a user from QuickBooks:
+
+```php
+auth()->user()->disconnectFromQuickBooks();
+```
+
+### Using the QuickBooks Facade
+
+The package provides a `QuickBooks` facade for easy access to the QuickBooks API:
+
+```php
+use E3DevelopmentSolutions\QuickBooks\Facades\QuickBooks;
+
+// Get the QuickBooks data service
+$dataService = QuickBooks::getDataService();
+
+// Use the data service to interact with QuickBooks
+$customers = $dataService->Query("SELECT * FROM Customer");
+```
+
+### Middleware
+
+The package includes a middleware to ensure users are connected to QuickBooks:
+
+```php
+Route::middleware(['auth', 'quickbooks.authenticated'])->group(function () {
+    // Routes that require QuickBooks authentication
+});
+```
+
+## Filament Integration
+
+### Dashboard Connection Button
+
+The package provides a Filament page for connecting to QuickBooks. Add it to your Filament panel:
+
+```php
+use E3DevelopmentSolutions\QuickBooks\Filament\Pages\Auth\Connect;
+
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->pages([
+            // Your other pages...
+            Connect::class,
+        ]);
+}
+```
+
+### Entity Resources
+
+The package includes Filament resources for QuickBooks entities. To use them, add them to your Filament panel:
+
+```php
+use E3DevelopmentSolutions\QuickBooks\Filament\Resources\CustomerResource;
+use E3DevelopmentSolutions\QuickBooks\Filament\Resources\InvoiceResource;
+use E3DevelopmentSolutions\QuickBooks\Filament\Resources\ItemResource;
+use E3DevelopmentSolutions\QuickBooks\Filament\Resources\PurchaseOrderResource;
+use E3DevelopmentSolutions\QuickBooks\Filament\Resources\SalesOrderResource;
+
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->resources([
+            // Your other resources...
+            CustomerResource::class,
+            InvoiceResource::class,
+            ItemResource::class,
+            PurchaseOrderResource::class,
+            SalesOrderResource::class,
+        ]);
+}
+```
+
+## Working with QuickBooks Entities
+
+### Customers
+
+```php
+use E3DevelopmentSolutions\QuickBooks\Services\CustomerService;
+
+// Inject the service
+public function __construct(protected CustomerService $customerService) {}
+
+// Get all customers
+$customers = $this->customerService->all();
+
+// Find a customer by ID
+$customer = $this->customerService->find($id);
+
+// Create a customer
+$customer = $this->customerService->create([
+    'DisplayName' => 'John Doe',
+    'PrimaryEmailAddr' => [
+        'Address' => 'john.doe@example.com',
+    ],
+]);
+
+// Update a customer
+$customer = $this->customerService->update($id, [
+    'DisplayName' => 'John Doe Updated',
+]);
+
+// Delete a customer
+$this->customerService->delete($id);
+```
+
+### Invoices
+
+```php
+use E3DevelopmentSolutions\QuickBooks\Services\InvoiceService;
+
+// Inject the service
+public function __construct(protected InvoiceService $invoiceService) {}
+
+// Get all invoices
+$invoices = $this->invoiceService->all();
+
+// Find an invoice by ID
+$invoice = $this->invoiceService->find($id);
+
+// Create an invoice
+$invoice = $this->invoiceService->create([
+    'CustomerRef' => [
+        'value' => $customerId,
+    ],
+    'Line' => [
+        [
+            'Amount' => 100.00,
+            'DetailType' => 'SalesItemLineDetail',
+            'SalesItemLineDetail' => [
+                'ItemRef' => [
+                    'value' => $itemId,
+                ],
+            ],
+        ],
+    ],
+]);
+
+// Update an invoice
+$invoice = $this->invoiceService->update($id, [
+    'CustomerRef' => [
+        'value' => $newCustomerId,
+    ],
+]);
+
+// Delete an invoice
+$this->invoiceService->delete($id);
+```
+
+Similar patterns apply for Item, Purchase Order, and Sales Order entities.
+
+## Error Handling
+
+The package provides custom exceptions for handling QuickBooks-related errors:
+
+- `QuickBooksException` - Base exception for all QuickBooks errors
+- `QuickBooksAuthException` - Authentication-related errors
+- `QuickBooksEntityException` - Entity-related errors
+
+Example:
+
+```php
+use E3DevelopmentSolutions\QuickBooks\Exceptions\QuickBooksAuthException;
+use E3DevelopmentSolutions\QuickBooks\Exceptions\QuickBooksEntityException;
+
+try {
+    $customer = $customerService->find($id);
+} catch (QuickBooksEntityException $e) {
+    // Handle entity error
+    return back()->with('error', $e->getMessage());
+} catch (QuickBooksAuthException $e) {
+    // Handle authentication error
+    return redirect()->route('quickbooks.connect')
+        ->with('error', 'Please reconnect to QuickBooks: ' . $e->getMessage());
+}
+```
+
+## Advanced Configuration
+
+### Custom Entity Mapping
+
+You can customize the entity mapping in the `config/quickbooks.php` file:
+
+```php
+'entities' => [
+    'customer' => [
+        'enabled' => true,
+        'model' => App\Models\Customer::class, // Your custom model
+        'service' => App\Services\CustomCustomerService::class, // Your custom service
+    ],
+    // ...
+],
+```
+
+### Custom User Model
+
+You can specify a custom user model in the configuration:
+
+```php
+'user' => [
+    'model' => App\Models\Admin::class, // Your custom user model
+    'table' => 'admins', // Your custom user table
+],
+```
+
+## Testing
+
+```bash
+composer test
+```
+
+## Security
+
+If you discover any security-related issues, please email security@example.com instead of using the issue tracker.
+
+## Credits
+
+- [E3 Development Solutions](https://github.com/e3-development-solutions)
+- [All Contributors](../../contributors)
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
