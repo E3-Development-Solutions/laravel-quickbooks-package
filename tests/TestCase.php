@@ -4,14 +4,14 @@ namespace E3DevelopmentSolutions\QuickBooks\Tests;
 
 use E3DevelopmentSolutions\QuickBooks\QuickBooksServiceProvider;
 use E3DevelopmentSolutions\QuickBooks\Tests\TestHelpers\MocksQuickBooks;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Orchestra\Testbench\TestCase as TestBenchTestCase;
 
 class TestCase extends TestBenchTestCase
 {
-    use RefreshDatabase, MocksQuickBooks;
+    use MocksQuickBooks;
     
     /**
      * Setup the test environment.
@@ -19,6 +19,40 @@ class TestCase extends TestBenchTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        
+        // Create database tables if they don't exist
+        if (!Schema::hasTable('users')) {
+            Schema::create('users', function ($table) {
+                $table->id();
+                $table->string('name');
+                $table->string('email')->unique();
+                $table->timestamp('email_verified_at')->nullable();
+                $table->string('password');
+                $table->rememberToken();
+                $table->timestamps();
+                
+                // QuickBooks fields
+                $table->text('qb_access_token')->nullable();
+                $table->text('qb_refresh_token')->nullable();
+                $table->timestamp('qb_token_expires')->nullable();
+                $table->string('qb_realm_id')->nullable();
+            });
+        }
+        
+        if (!Schema::hasTable('quickbooks_tokens')) {
+            Schema::create('quickbooks_tokens', function ($table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->text('access_token');
+                $table->text('refresh_token');
+                $table->string('realm_id');
+                $table->timestamp('expires_at')->nullable();
+                $table->timestamp('refresh_token_expires_at')->nullable();
+                $table->timestamps();
+                
+                $table->foreign('user_id')->references('id')->on('users');
+            });
+        }
         
         // Set up test configuration
         Config::set('quickbooks', [
@@ -28,6 +62,8 @@ class TestCase extends TestBenchTestCase
             'scope' => env('QUICKBOOKS_SCOPE', 'com.intuit.quickbooks.accounting'),
             'base_url' => env('QUICKBOOKS_BASE_URL', 'development'),
             'auth_mode' => env('QUICKBOOKS_AUTH_MODE', 'oauth2'),
+            'user_id' => env('QUICKBOOKS_USER_ID', 'test_user_id'),
+            'realm_id' => env('QUICKBOOKS_REALM_ID', 'test_realm_id'),
         ]);
         
         // Mock the DataService
@@ -39,6 +75,9 @@ class TestCase extends TestBenchTestCase
      */
     protected function tearDown(): void
     {
+        Schema::dropIfExists('quickbooks_tokens');
+        Schema::dropIfExists('users');
+        
         parent::tearDown();
         
         if ($container = Mockery::getContainer()) {
@@ -89,35 +128,15 @@ class TestCase extends TestBenchTestCase
             'database' => ':memory:',
             'prefix'   => '',
         ]);
-
-        // Setup QuickBooks configuration with test values
-        $app['config']->set('quickbooks', [
-            'auth_mode' => 'oauth2',
-            'client_id' => 'test_client_id',
-            'client_secret' => 'test_client_secret',
-            'redirect_uri' => 'http://localhost/quickbooks/callback',
-            'scope' => 'com.intuit.quickbooks.accounting',
-            'base_url' => 'development',
-        ]);
-    }
-
-    /**
-     * Define database migrations.
-     *
-     * @return void
-     */
-    protected function defineDatabaseMigrations()
-    {
-        $this->loadLaravelMigrations();
         
-        // Run package migrations
-        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        // Set up the test user model for authentication
+        $app['config']->set('auth.providers.users.model', \E3DevelopmentSolutions\QuickBooks\Tests\TestHelpers\TestUser::class);
         
-        // Run migrations
-        $this->artisan('migrate', ['--database' => 'testbench'])->run();
+        // Set up encryption key for testing
+        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
         
-        $this->beforeApplicationDestroyed(function () {
-            $this->artisan('migrate:rollback');
-        });
+        // Set up QuickBooks configuration
+        $app['config']->set('quickbooks.user_id', env('QUICKBOOKS_USER_ID', 'test_user_id'));
+        $app['config']->set('quickbooks.realm_id', env('QUICKBOOKS_REALM_ID', 'test_realm_id'));
     }
 }
