@@ -42,6 +42,65 @@ php artisan vendor:publish --provider="E3DevelopmentSolutions\QuickBooks\QuickBo
 php artisan migrate
 ```
 
+## Testing
+
+To run the test suite, you'll need to install the development dependencies:
+
+```bash
+composer require --dev orchestra/testbench mockery/mockery
+```
+
+Then run the tests with:
+
+```bash
+composer test
+```
+
+### Test Environment
+
+Create a `.env.testing` file with the following variables:
+
+```
+APP_ENV=testing
+APP_DEBUG=true
+APP_KEY=base64:testkey123456789012345678901234567890=
+
+DB_CONNECTION=sqlite
+DB_DATABASE=:memory:
+
+CACHE_DRIVER=array
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=array
+
+QUICKBOOKS_CLIENT_ID=test_client_id
+QUICKBOOKS_CLIENT_SECRET=test_client_secret
+QUICKBOOKS_REDIRECT_URI=http://localhost:8000/quickbooks/callback
+QUICKBOOKS_SCOPE=com.intuit.quickbooks.accounting
+```
+
+### Writing Tests
+
+When writing tests, you can use the `MocksQuickBooks` trait to easily mock the QuickBooks DataService:
+
+```php
+use E3DevelopmentSolutions\QuickBooks\Tests\TestHelpers\MocksQuickBooks;
+
+class YourTest extends TestCase
+{
+    use MocksQuickBooks;
+    
+    public function test_something()
+    {
+        // Set up expectations
+        $this->dataService->shouldReceive('someMethod')
+            ->once()
+            ->andReturn('expected result');
+            
+        // Your test code here
+    }
+}
+```
+
 ## Configuration
 
 ### Environment Variables

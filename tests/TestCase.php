@@ -3,12 +3,50 @@
 namespace E3DevelopmentSolutions\QuickBooks\Tests;
 
 use E3DevelopmentSolutions\QuickBooks\QuickBooksServiceProvider;
+use E3DevelopmentSolutions\QuickBooks\Tests\TestHelpers\MocksQuickBooks;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
+use Mockery;
 use Orchestra\Testbench\TestCase as TestBenchTestCase;
 
 class TestCase extends TestBenchTestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksQuickBooks;
+    
+    /**
+     * Setup the test environment.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Set up test configuration
+        Config::set('quickbooks', [
+            'client_id' => env('QUICKBOOKS_CLIENT_ID', 'test_client_id'),
+            'client_secret' => env('QUICKBOOKS_CLIENT_SECRET', 'test_client_secret'),
+            'redirect_uri' => env('QUICKBOOKS_REDIRECT_URI', 'http://localhost:8000/quickbooks/callback'),
+            'scope' => env('QUICKBOOKS_SCOPE', 'com.intuit.quickbooks.accounting'),
+            'base_url' => env('QUICKBOOKS_BASE_URL', 'development'),
+            'auth_mode' => env('QUICKBOOKS_AUTH_MODE', 'oauth2'),
+        ]);
+        
+        // Mock the DataService
+        $this->mockDataService();
+    }
+    
+    /**
+     * Clean up the testing environment before the next test.
+     */
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+        
+        if ($container = Mockery::getContainer()) {
+            $this->addToAssertionCount($container->mockery_getExpectationCount());
+        }
+        
+        Mockery::close();
+    }
 
     /**
      * Get package providers.

@@ -1,0 +1,67 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        php: [8.0, 8.1, 8.2]
+        laravel: [^9.0, ^10.0]
+        include:
+          - laravel: ^9.0
+            testbench: ^7.0
+          - laravel: ^10.0
+            testbench: ^8.0
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+          coverage: none
+      
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" --no-update
+          composer require "orchestra/testbench:${{ matrix.testbench }}" --dev --no-update
+          composer update --prefer-dist --no-interaction --no-progress
+      
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      
+      - name: Generate key
+        run: php artisan key:generate
+      
+      - name: Create SQLite database
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+      
+      - name: Execute tests
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+          QUICKBOOKS_CLIENT_ID: test_client_id
+          QUICKBOOKS_CLIENT_SECRET: test_client_secret
+          QUICKBOOKS_REDIRECT_URI: http://localhost:8000/quickbooks/callback
+          QUICKBOOKS_SCOPE: com.intuit.quickbooks.accounting
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          fail_ci_if_error: false
