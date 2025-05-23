@@ -2,46 +2,13 @@
 
 namespace E3DevelopmentSolutions\QuickBooks;
 
+use QuickBooksOnline\API\DataService\DataService;
 use Illuminate\Support\ServiceProvider;
-use E3DevelopmentSolutions\QuickBooks\Services\QuickBooksBaseService;
 
 class QuickBooksServiceProvider extends ServiceProvider
 {
     /**
-     * Bootstrap the application services.
-     *
-     * @return void
-     */
-    public function boot()
-    {
-        // Publish configuration
-        $this->publishes([
-            __DIR__ . '/config/quickbooks.php' => config_path('quickbooks.php'),
-        ], 'config');
-
-        // Publish migrations
-        $this->publishes([
-            __DIR__ . '/../database/migrations' => database_path('migrations'),
-        ], 'migrations');
-
-        // Register routes
-        $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
-
-        // Register commands
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                // Register commands here
-            ]);
-        }
-
-        // Register Filament resources
-        $this->app->booted(function () {
-            // Register Filament resources when available
-        });
-    }
-
-    /**
-     * Register the application services.
+     * Register services.
      *
      * @return void
      */
@@ -49,17 +16,57 @@ class QuickBooksServiceProvider extends ServiceProvider
     {
         // Merge configuration
         $this->mergeConfigFrom(
-            __DIR__ . '/config/quickbooks.php', 'quickbooks'
+            __DIR__.'/../config/quickbooks.php', 'quickbooks'
         );
 
-        // Register services
-        $this->app->singleton(QuickBooksBaseService::class, function ($app) {
-            return new QuickBooksBaseService();
-        });
+        // Register the main QuickBooks service
+        $this->app->singleton('quickbooks', function ($app) {
+            $config = $app['config']['quickbooks'];
+            
+            $dataService = DataService::Configure([
+                'auth_mode' => $config['auth_mode'] ?? 'oauth2',
+                'ClientID' => $config['client_id'],
+                'ClientSecret' => $config['client_secret'],
+                'RedirectURI' => $config['redirect_uri'],
+                'scope' => $config['scope'],
+                'baseUrl' => $config['base_url'] ?? 'development',
+            ]);
 
-        // Register facade
-        $this->app->bind('quickbooks', function ($app) {
-            return $app->make(QuickBooksBaseService::class);
+            return new QuickBooks($dataService);
         });
+    }
+
+
+    /**
+     * Bootstrap services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        // Publish configuration
+        $this->publishes([
+            __DIR__.'/../config/quickbooks.php' => config_path('quickbooks.php'),
+        ], 'config');
+
+        // Publish migrations
+        $this->publishes([
+            __DIR__.'/../database/migrations' => database_path('migrations'),
+        ], 'migrations');
+
+        // Load migrations
+        if ($this->app->runningInConsole()) {
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        }
+    }
+
+    /**
+     * Get the services provided by the provider.
+     *
+     * @return array
+     */
+    public function provides()
+    {
+        return ['quickbooks'];
     }
 }
