@@ -17,6 +17,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.9",
+        "illuminate/console": "*",
         "mockery/mockery": "^1.6",
         "orchestra/testbench": "^8.36",
         "phpunit/phpunit": "^10.0"
