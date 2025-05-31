@@ -51,6 +51,6 @@
         "sort-packages": true,
         "optimize-autoloader": true
     },
-    "minimum-stability": "stable",
-    "prefer-stable": true
+    "minimum-stability": "beta",
+    "prefer-stable": false
 }
