@@ -2,6 +2,8 @@
 
 namespace E3DevelopmentSolutions\QuickBooks\Services\Traits;
 
+use Illuminate\Support\Facades\Redirect;
+
 trait HasQuickBooksAuthentication
 {
     /**
@@ -79,6 +81,13 @@ trait HasQuickBooksAuthentication
         $this->qb_refresh_token = null;
         $this->qb_token_expires = null;
         $this->qb_realm_id = null;
-        $this->save();
     }
+
+    public function connectToQuickBooks()
+    {
+        // Assumes you have a named route for QuickBooks connect, e.g., 'quickbooks.connect'
+        return Redirect::route('quickbooks.connect');
+    }
+ 
+
 }
