@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use E3DevelopmentSolutions\QuickBooks\Services\QuickBooksBaseService;
 use E3DevelopmentSolutions\QuickBooks\Exceptions\QuickBooksAuthException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Routing\Controller;
 
 class QuickBooksAuthController extends Controller
@@ -38,15 +39,19 @@ class QuickBooksAuthController extends Controller
         try {
             $state = uniqid('', true);
             
-            // Store the state in the session with the authenticated user's ID
-            session([
-                'quickbooks_oauth_state' => $state,
-                'quickbooks_user_id' => auth()->id()
-            ]);
+            // Store the state and user ID in the database or cache instead of session
+            Cache::put('quickbooks_state_' . $state, [
+                'user_id' => auth()->id(),
+                'created_at' => now(),
+            ], now()->addMinutes(10));
             
             $authUrl = $this->quickBooksService->getAuthorizationUrl($state);
             return redirect()->away($authUrl);
-        } catch (QuickBooksAuthException $e) {
+        } catch (\Exception $e) {
+            Log::error('QuickBooks Connect Error: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
             return redirect()->route('dashboard')
                 ->with('error', 'Failed to connect to QuickBooks: ' . $e->getMessage());
         }
@@ -62,8 +67,10 @@ class QuickBooksAuthController extends Controller
     {
         try {
             Log::info('QuickBooks OAuth Callback Received:', [
-                'all_params' => $request->all(),
-                'headers' => $request->headers->all(),
+                'all_params' => $request->except(['code']), // Don't log the full code
+                'headers' => array_map(function($header) { 
+                    return is_array($header) ? implode(', ', $header) : $header; 
+                }, $request->headers->all()),
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
@@ -82,21 +89,27 @@ class QuickBooksAuthController extends Controller
                 $error = $request->input('error');
                 $errorDescription = $request->input('error_description');
                 
-                Log::error('QuickBooks OAuth Callback Error:', [
+                Log::error('QuickBooks OAuth Callback Error - Missing Parameters:', [
                     'error' => $error,
                     'error_description' => $errorDescription,
+                    'request_params' => $request->all(),
                 ]);
                 
                 throw new QuickBooksAuthException('Invalid callback parameters. ' . ($error ? "Error: {$error} - {$errorDescription}" : ''));
             }
             
-            // Verify the state matches what we stored
-            if (!session()->has('quickbooks_oauth_state') || $state !== session('quickbooks_oauth_state')) {
-                throw new QuickBooksAuthException('Invalid state parameter.');
+            // Get the state data from cache
+            $stateData = Cache::get('quickbooks_state_' . $state);
+            
+            if (!$stateData) {
+                Log::error('QuickBooks OAuth Error: Invalid or expired state parameter', [
+                    'state' => $state,
+                    'all_states' => $request->session()->all(),
+                ]);
+                throw new QuickBooksAuthException('Invalid or expired state parameter.');
             }
             
-            // Get the user ID from the session
-            $userId = session('quickbooks_user_id');
+            $userId = $stateData['user_id'] ?? null;
             
             if (!$userId) {
                 throw new QuickBooksAuthException('Unable to determine authenticated user.');
@@ -105,13 +118,14 @@ class QuickBooksAuthController extends Controller
             Log::info('Processing QuickBooks OAuth callback', [
                 'user_id' => $userId,
                 'realm_id' => $realmId,
+                'state' => $state,
             ]);
             
             // Process the callback with the user ID
             $result = $this->quickBooksService->processCallback($code, $realmId, $userId);
             
-            // Clear the session state
-            session()->forget(['quickbooks_oauth_state', 'quickbooks_user_id']);
+            // Clear the state from cache
+            Cache::forget('quickbooks_state_' . $state);
             
             Log::info('Successfully processed QuickBooks OAuth callback', [
                 'user_id' => $userId,

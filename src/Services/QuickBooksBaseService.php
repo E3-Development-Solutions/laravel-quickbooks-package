@@ -132,12 +132,39 @@ class QuickBooksBaseService
     /**
      * Get the OAuth2 login URL.
      *
+     * @param  string|null  $state
      * @return string
      */
-    public function getAuthorizationUrl()
+    public function getAuthorizationUrl($state = null)
     {
-        $oauth2LoginHelper = $this->dataService->getOAuth2LoginHelper();
-        return $oauth2LoginHelper->getAuthorizationCodeURL();
+        try {
+            $this->initializeDataService();
+            $oauth2LoginHelper = $this->dataService->getOAuth2LoginHelper();
+            
+            $scopes = [
+                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_OPENID,
+                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_EMAIL,
+                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_PROFILE,
+                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_PHONE,
+                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_ADDRESS,
+                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_ACCOUNTING,
+            ];
+            
+            $authUrl = $oauth2LoginHelper->getAuthorizationCodeURL(
+                $scopes,
+                $state,
+                config('quickbooks.redirect_uri')
+            );
+            
+            return $authUrl;
+        } catch (\Exception $e) {
+            Log::error('Error generating QuickBooks authorization URL: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            throw new QuickBooksAuthException('Failed to generate QuickBooks authorization URL: ' . $e->getMessage());
+        }
     }
 
     /**
