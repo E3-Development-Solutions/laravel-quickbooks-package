@@ -1,7 +1,7 @@
 # Laravel QuickBooks Integration
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/e3-development-solutions/quickbooks.svg?style=flat-square)](https://packagist.org/packages/e3-development-solutions/quickbooks)
-[![Total Downloads](https://img.shields.io/packagist/dt/e3-development-solutions/quickbooks.svg?style=flat-square)](https://packagist.org/packages/e3-development-solutions/quickbooks)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/e3-development-solutions/quickbooks.svg?style=flat-square)](https://packagist.org/packages/e3-development-solutions/laravel-quickbooks-package)
+[![Total Downloads](https://img.shields.io/packagist/dt/e3-development-solutions/quickbooks.svg?style=flat-square)](https://packagist.org/packages/e3-development-solutions/laravel-quickbooks-package)
 
 A Laravel package for integrating QuickBooks Online with your Laravel application, featuring Filament admin panel support.
 
