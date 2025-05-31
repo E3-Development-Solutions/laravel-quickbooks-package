@@ -55,6 +55,16 @@ trait HasQuickBooksAuthentication
     {
         return !empty($this->qb_access_token) && !empty($this->qb_refresh_token) && $this->qb_token_expires_at > now();
     }
+    
+    /**
+     * Alias for hasQuickBooksConnection for backward compatibility.
+     *
+     * @return bool
+     */
+    public function isConnectedToQuickBooks()
+    {
+        return $this->hasQuickBooksConnection();
+    }
 
     /**
      * Disconnect the user from QuickBooks.
