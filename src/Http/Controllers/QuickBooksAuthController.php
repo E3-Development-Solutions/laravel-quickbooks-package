@@ -36,10 +36,18 @@ class QuickBooksAuthController extends Controller
     public function connect()
     {
         try {
-            $authUrl = $this->quickBooksService->getAuthorizationUrl();
+            $state = uniqid('', true);
+            
+            // Store the state in the session with the authenticated user's ID
+            session([
+                'quickbooks_oauth_state' => $state,
+                'quickbooks_user_id' => auth()->id()
+            ]);
+            
+            $authUrl = $this->quickBooksService->getAuthorizationUrl($state);
             return redirect()->away($authUrl);
         } catch (QuickBooksAuthException $e) {
-            return redirect()->route('filament.pages.dashboard')
+            return redirect()->route('dashboard')
                 ->with('error', 'Failed to connect to QuickBooks: ' . $e->getMessage());
         }
     }
@@ -70,7 +78,7 @@ class QuickBooksAuthController extends Controller
                 'state' => $state,
             ]);
             
-            if (! $code || ! $realmId) {
+            if (! $code || ! $realmId || ! $state) {
                 $error = $request->input('error');
                 $errorDescription = $request->input('error_description');
                 
@@ -82,15 +90,31 @@ class QuickBooksAuthController extends Controller
                 throw new QuickBooksAuthException('Invalid callback parameters. ' . ($error ? "Error: {$error} - {$errorDescription}" : ''));
             }
             
+            // Verify the state matches what we stored
+            if (!session()->has('quickbooks_oauth_state') || $state !== session('quickbooks_oauth_state')) {
+                throw new QuickBooksAuthException('Invalid state parameter.');
+            }
+            
+            // Get the user ID from the session
+            $userId = session('quickbooks_user_id');
+            
+            if (!$userId) {
+                throw new QuickBooksAuthException('Unable to determine authenticated user.');
+            }
+            
             Log::info('Processing QuickBooks OAuth callback', [
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
                 'realm_id' => $realmId,
             ]);
             
-            $result = $this->quickBooksService->processCallback($code, $realmId);
+            // Process the callback with the user ID
+            $result = $this->quickBooksService->processCallback($code, $realmId, $userId);
+            
+            // Clear the session state
+            session()->forget(['quickbooks_oauth_state', 'quickbooks_user_id']);
             
             Log::info('Successfully processed QuickBooks OAuth callback', [
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
                 'realm_id' => $realmId,
             ]);
             

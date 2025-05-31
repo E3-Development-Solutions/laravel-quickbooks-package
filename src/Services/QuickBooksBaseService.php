@@ -6,6 +6,8 @@ use QuickBooksOnline\API\DataService\DataService;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 use QuickBooksOnline\API\Exception\ServiceException;
 use E3DevelopmentSolutions\QuickBooks\Exceptions\QuickBooksAuthException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class QuickBooksBaseService
 {
@@ -44,7 +46,7 @@ class QuickBooksBaseService
             ]);
 
             // If user is authenticated, set access token
-            if (auth()->check() && auth()->user()->qb_access_token) {
+            if (Auth::check() && Auth::user()->qb_access_token) {
                 $this->setTokens();
             }
         } catch (\Exception $e) {
@@ -59,7 +61,7 @@ class QuickBooksBaseService
      */
     protected function setTokens()
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if ($user->qb_access_token && $user->qb_realm_id) {
             $this->dataService->updateOAuth2Token($user->qb_access_token);
@@ -77,7 +79,7 @@ class QuickBooksBaseService
      */
     protected function refreshIfNeeded()
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if ($user->qb_token_expires && now()->greaterThan($user->qb_token_expires)) {
             try {
@@ -110,7 +112,7 @@ class QuickBooksBaseService
      */
     public function storeTokens(array $tokens)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $user->qb_access_token = $tokens['access_token'];
         $user->qb_refresh_token = $tokens['refresh_token'];
         $user->qb_token_expires = now()->addSeconds($tokens['expires_in']);
@@ -143,27 +145,40 @@ class QuickBooksBaseService
      *
      * @param  string  $code
      * @param  string  $realmId
+     * @param  int|null  $userId
      * @return bool
      */
-    public function processCallback($code, $realmId)
+    public function processCallback($code, $realmId, $userId = null)
     {
         try {
             $oauth2LoginHelper = $this->dataService->getOAuth2LoginHelper();
             $accessTokenObj = $oauth2LoginHelper->exchangeAuthorizationCodeForToken($code, $realmId);
             
-            $this->storeTokens([
-                'access_token' => $accessTokenObj->getAccessToken(),
-                'refresh_token' => $accessTokenObj->getRefreshToken(),
-                'expires_in' => $accessTokenObj->getAccessTokenExpiresIn(),
-            ]);
+            // Get the user model instance
+            $userModel = config('auth.providers.users.model');
+            $user = $userId ? $userModel::find($userId) : Auth::user();
             
-            // Store the realm ID
-            $user = auth()->user();
+            if (!$user) {
+                throw new QuickBooksAuthException('User not found.');
+            }
+            
+            // Store the tokens in the user model
+            $user->qb_access_token = $accessTokenObj->getAccessToken();
+            $user->qb_refresh_token = $accessTokenObj->getRefreshToken();
+            $user->qb_token_expires_at = now()->addSeconds($accessTokenObj->getAccessTokenExpiresIn());
             $user->qb_realm_id = $realmId;
             $user->save();
             
             return true;
         } catch (\Exception $e) {
+            Log::error('QuickBooks OAuth Error: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'code' => $code ? '***REDACTED***' : null,
+                'realmId' => $realmId,
+                'userId' => $userId,
+            ]);
+            
             throw new QuickBooksAuthException('Failed to process QuickBooks callback: ' . $e->getMessage());
         }
     }
