@@ -86,7 +86,7 @@ trait HasQuickBooksAuthentication
     public function connectToQuickBooks()
     {
         // Assumes you have a named route for QuickBooks connect, e.g., 'quickbooks.connect'
-        return Redirect::route('quickbooks.connect');
+        return redirect()->route('quickbooks.connect');
     }
  
 
