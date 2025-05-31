@@ -45,7 +45,7 @@ class QuickBooksServiceProvider extends ServiceProvider
     public function boot()
     {
         // Load routes
-        $this->loadRoutesFrom(__DIR__.'/../../../routes/web.php');
+        $this->loadRoutesFrom(__DIR__.'/../../../../routes/web.php');
 
         // Publish configuration
         $this->publishes([
