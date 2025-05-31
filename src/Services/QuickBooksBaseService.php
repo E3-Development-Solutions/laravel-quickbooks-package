@@ -141,13 +141,15 @@ class QuickBooksBaseService
             $this->initializeDataService();
             $oauth2LoginHelper = $this->dataService->getOAuth2LoginHelper();
             
+            // Use string scopes instead of constants
             $scopes = [
-                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_OPENID,
-                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_EMAIL,
-                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_PROFILE,
-                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_PHONE,
-                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_ADDRESS,
-                \QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper::SCOPE_ACCOUNTING,
+                'openid',
+                'email',
+                'profile',
+                'phone',
+                'address',
+                'com.intuit.quickbooks.accounting',
+                'com.intuit.quickbooks.payment',
             ];
             
             $authUrl = $oauth2LoginHelper->getAuthorizationCodeURL(

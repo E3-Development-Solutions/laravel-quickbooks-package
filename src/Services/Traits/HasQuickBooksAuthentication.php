@@ -31,9 +31,9 @@ trait HasQuickBooksAuthentication
      *
      * @return \Illuminate\Support\Carbon|null
      */
-    public function getQuickBooksTokenExpires()
+    public function getQuickBooksTokenExpiresAt()
     {
-        return $this->qb_token_expires;
+        return $this->qb_token_expires_at;
     }
 
     /**
@@ -47,40 +47,28 @@ trait HasQuickBooksAuthentication
     }
 
     /**
-     * Determine if the user is connected to QuickBooks.
+     * Check if the user has a valid QuickBooks connection.
      *
      * @return bool
      */
-    public function isConnectedToQuickBooks()
+    public function hasQuickBooksConnection()
     {
-        return ! is_null($this->qb_access_token) && ! is_null($this->qb_realm_id);
+        return !empty($this->qb_access_token) && !empty($this->qb_refresh_token) && $this->qb_token_expires_at > now();
     }
 
     /**
-     * Determine if the QuickBooks token needs to be refreshed.
+     * Disconnect the user from QuickBooks.
      *
      * @return bool
-     */
-    public function needsQuickBooksTokenRefresh()
-    {
-        if (! $this->isConnectedToQuickBooks()) {
-            return false;
-        }
-
-        return now()->greaterThan($this->qb_token_expires);
-    }
-
-    /**
-     * Disconnect from QuickBooks.
-     *
-     * @return void
      */
     public function disconnectFromQuickBooks()
     {
         $this->qb_access_token = null;
         $this->qb_refresh_token = null;
-        $this->qb_token_expires = null;
+        $this->qb_token_expires_at = null;
         $this->qb_realm_id = null;
+        
+        return $this->save();
     }
 
     public function connectToQuickBooks()
@@ -88,6 +76,4 @@ trait HasQuickBooksAuthentication
         // Assumes you have a named route for QuickBooks connect, e.g., 'quickbooks.connect'
         return redirect()->route('quickbooks.connect');
     }
- 
-
 }

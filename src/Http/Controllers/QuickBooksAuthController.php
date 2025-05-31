@@ -2,15 +2,16 @@
 
 namespace E3DevelopmentSolutions\QuickBooks\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Illuminate\Routing\Controller as BaseController;
 use E3DevelopmentSolutions\QuickBooks\Services\QuickBooksBaseService;
 use E3DevelopmentSolutions\QuickBooks\Exceptions\QuickBooksAuthException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Routing\Controller;
 
-class QuickBooksAuthController extends Controller
+class QuickBooksAuthController extends BaseController
 {
+
     /**
      * The QuickBooks base service instance.
      *
