@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use E3DevelopmentSolutions\QuickBooks\Services\QuickBooksBaseService;
 use E3DevelopmentSolutions\QuickBooks\Exceptions\QuickBooksAuthException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Routing\Controller;
 
 class QuickBooksAuthController extends Controller
 {
@@ -93,7 +94,7 @@ class QuickBooksAuthController extends Controller
                 'realm_id' => $realmId,
             ]);
             
-            return redirect()->route('filament.pages.dashboard')
+            return redirect()->route('dashboard')
                 ->with('success', 'Successfully connected to QuickBooks!');
                 
         } catch (QuickBooksAuthException $e) {
@@ -103,7 +104,7 @@ class QuickBooksAuthController extends Controller
                 'user_id' => auth()->id(),
             ]);
             
-            return redirect()->route('filament.pages.dashboard')
+            return redirect()->route('dashboard')
                 ->with('error', 'Failed to connect to QuickBooks: ' . $e->getMessage());
         } catch (\Exception $e) {
             Log::critical('Unexpected QuickBooks OAuth Error: ' . $e->getMessage(), [
@@ -113,7 +114,7 @@ class QuickBooksAuthController extends Controller
                 'request' => $request->except(['code', 'state']), // Don't log sensitive data
             ]);
             
-            return redirect()->route('filament.pages.dashboard')
+            return redirect()->route('dashboard')
                 ->with('error', 'An unexpected error occurred while connecting to QuickBooks.');
         }
     }
@@ -134,7 +135,7 @@ class QuickBooksAuthController extends Controller
             
             Log::info('Successfully disconnected user from QuickBooks', ['user_id' => $userId]);
             
-            return redirect()->route('filament.pages.dashboard')
+            return redirect()->route('dashboard')
                 ->with('success', 'Successfully disconnected from QuickBooks!');
                 
         } catch (\Exception $e) {
@@ -143,7 +144,7 @@ class QuickBooksAuthController extends Controller
                 'exception' => $e,
             ]);
             
-            return redirect()->route('filament.pages.dashboard')
+            return redirect()->route('dashboard')
                 ->with('error', 'Failed to disconnect from QuickBooks.');
         }
     }
