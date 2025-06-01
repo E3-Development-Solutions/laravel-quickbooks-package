@@ -158,16 +158,8 @@ class QuickBooksBaseService
             $this->initializeDataService();
             $oauth2LoginHelper = $this->dataService->getOAuth2LoginHelper();
             
-            // Use string scopes instead of constants
-            $scopes = [
-                'openid',
-                'email',
-                'profile',
-                'phone',
-                'address',
-                'com.intuit.quickbooks.accounting',
-                'com.intuit.quickbooks.payment',
-            ];
+            // Use configured scope from config
+            $scopes = explode(' ', config('quickbooks.scope'));
             
             $authUrl = $oauth2LoginHelper->getAuthorizationCodeURL(
                 $scopes,
@@ -197,7 +189,27 @@ class QuickBooksBaseService
     public function processCallback($code, $realmId, $userId = null)
     {
         try {
+            Log::info('Processing QuickBooks callback', [
+                'realmId' => $realmId,
+                'userId' => $userId,
+                'client_id_configured' => !empty(config('quickbooks.client_id')),
+                'client_secret_configured' => !empty(config('quickbooks.client_secret')),
+                'redirect_uri' => config('quickbooks.redirect_uri')
+            ]);
+
+            // Re-initialize DataService to ensure fresh configuration
+            $this->initializeDataService();
+            
             $oauth2LoginHelper = $this->dataService->getOAuth2LoginHelper();
+            
+            // Log OAuth configuration
+            Log::debug('QuickBooks OAuth configuration', [
+                'auth_mode' => config('quickbooks.auth_mode'),
+                'redirect_uri' => config('quickbooks.redirect_uri'),
+                'scope' => config('quickbooks.scope'),
+                'base_url' => config('quickbooks.base_url')
+            ]);
+            
             $accessTokenObj = $oauth2LoginHelper->exchangeAuthorizationCodeForToken($code, $realmId);
             
             // Get the user model instance
@@ -227,6 +239,11 @@ class QuickBooksBaseService
                 ]
             );
             
+            Log::info('Successfully processed QuickBooks callback', [
+                'user_id' => $user->id,
+                'realm_id' => $realmId
+            ]);
+            
             return true;
         } catch (\Exception $e) {
             Log::error('QuickBooks OAuth Error: ' . $e->getMessage(), [
@@ -235,6 +252,7 @@ class QuickBooksBaseService
                 'code' => $code ? '***REDACTED***' : null,
                 'realmId' => $realmId,
                 'userId' => $userId,
+                'request_params' => request()->all()
             ]);
             
             throw new QuickBooksAuthException('Failed to process QuickBooks callback: ' . $e->getMessage());
