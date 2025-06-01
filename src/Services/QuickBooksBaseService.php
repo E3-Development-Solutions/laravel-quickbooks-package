@@ -122,6 +122,7 @@ class QuickBooksBaseService
         $user->save();
 
         // Also store in QuickBooksToken table if realm_id is available
+        /*
         if ($user->qb_realm_id) {
             QuickBooksToken::updateOrCreate(
                 ['user_id' => $user->id],
@@ -134,6 +135,7 @@ class QuickBooksBaseService
                 ]
             );
         }
+        */
     }
 
     /**
@@ -226,7 +228,7 @@ class QuickBooksBaseService
             $user->qb_token_expires_at = now()->addSeconds($accessTokenObj->getAccessTokenExpiresIn());
             $user->qb_realm_id = $realmId;
             $user->save();
-
+/*
             // Also store in QuickBooksToken table
             QuickBooksToken::updateOrCreate(
                 ['user_id' => $user->id],
@@ -238,7 +240,7 @@ class QuickBooksBaseService
                     'refresh_token_expires_at' => now()->addMonths(3), // QuickBooks refresh tokens expire after 100 days
                 ]
             );
-            
+*/
             Log::info('Successfully processed QuickBooks callback', [
                 'user_id' => $user->id,
                 'realm_id' => $realmId
