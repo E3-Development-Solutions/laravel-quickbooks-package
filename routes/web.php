@@ -11,8 +11,9 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->name('quickbooks.disconnect');
 });
 
-// Public callback route (no auth middleware but still needs web middleware for session)
-Route::middleware(['web'])->group(function () {
+// Callback route needs web middleware for session and should attempt auth
+Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/quickbooks/callback', [QuickBooksAuthController::class, 'callback'])
-        ->name('quickbooks.callback');
+        ->name('quickbooks.callback')
+        ->withoutMiddleware(['auth']); // Remove auth middleware just for this route but keep the session
 });

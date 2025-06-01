@@ -214,13 +214,24 @@ class QuickBooksBaseService
             
             $accessTokenObj = $oauth2LoginHelper->exchangeAuthorizationCodeForToken($code, $realmId);
             
-            // Get the user model instance
-            $userModel = config('auth.providers.users.model');
-            $user = $userId ? $userModel::find($userId) : Auth::user();
+            // Get the user - first try the provided userId, then try the authenticated user
+            $user = null;
+            if ($userId) {
+                $userModel = config('auth.providers.users.model');
+                $user = $userModel::find($userId);
+            }
             
             if (!$user) {
-                throw new QuickBooksAuthException('User not found.');
+                $user = Auth::user();
             }
+            
+            if (!$user) {
+                throw new QuickBooksAuthException('User not found. Please ensure you are logged in.');
+            }
+            
+            Log::info('Found user for QuickBooks callback', [
+                'user_id' => $user->id
+            ]);
             
             // Store the tokens
             $user->qb_access_token = $accessTokenObj->getAccessToken();
@@ -228,19 +239,7 @@ class QuickBooksBaseService
             $user->qb_token_expires_at = now()->addSeconds($accessTokenObj->getAccessTokenExpiresIn());
             $user->qb_realm_id = $realmId;
             $user->save();
-/*
-            // Also store in QuickBooksToken table
-            QuickBooksToken::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'access_token' => $accessTokenObj->getAccessToken(),
-                    'refresh_token' => $accessTokenObj->getRefreshToken(),
-                    'realm_id' => $realmId,
-                    'expires_at' => now()->addSeconds($accessTokenObj->getAccessTokenExpiresIn()),
-                    'refresh_token_expires_at' => now()->addMonths(3), // QuickBooks refresh tokens expire after 100 days
-                ]
-            );
-*/
+
             Log::info('Successfully processed QuickBooks callback', [
                 'user_id' => $user->id,
                 'realm_id' => $realmId
