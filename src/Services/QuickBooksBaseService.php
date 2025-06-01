@@ -6,6 +6,7 @@ use QuickBooksOnline\API\DataService\DataService;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2LoginHelper;
 use QuickBooksOnline\API\Exception\ServiceException;
 use E3DevelopmentSolutions\QuickBooks\Exceptions\QuickBooksAuthException;
+use E3DevelopmentSolutions\QuickBooks\Models\QuickBooksToken;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -81,7 +82,7 @@ class QuickBooksBaseService
     {
         $user = Auth::user();
         
-        if ($user->qb_token_expires && now()->greaterThan($user->qb_token_expires)) {
+        if ($user->qb_token_expires_at && now()->greaterThan($user->qb_token_expires_at)) {
             try {
                 $oauth2LoginHelper = new OAuth2LoginHelper(
                     config('quickbooks.client_id'),
@@ -105,7 +106,7 @@ class QuickBooksBaseService
     }
 
     /**
-     * Store the OAuth tokens in the user model.
+     * Store the OAuth tokens in both the user model and tokens table.
      *
      * @param  array  $tokens
      * @return void
@@ -113,10 +114,26 @@ class QuickBooksBaseService
     public function storeTokens(array $tokens)
     {
         $user = Auth::user();
+        
+        // Update user model
         $user->qb_access_token = $tokens['access_token'];
         $user->qb_refresh_token = $tokens['refresh_token'];
-        $user->qb_token_expires = now()->addSeconds($tokens['expires_in']);
+        $user->qb_token_expires_at = now()->addSeconds($tokens['expires_in']);
         $user->save();
+
+        // Also store in QuickBooksToken table if realm_id is available
+        if ($user->qb_realm_id) {
+            QuickBooksToken::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'access_token' => $tokens['access_token'],
+                    'refresh_token' => $tokens['refresh_token'],
+                    'realm_id' => $user->qb_realm_id,
+                    'expires_at' => now()->addSeconds($tokens['expires_in']),
+                    'refresh_token_expires_at' => now()->addMonths(3), // QuickBooks refresh tokens expire after 100 days
+                ]
+            );
+        }
     }
 
     /**
@@ -191,12 +208,24 @@ class QuickBooksBaseService
                 throw new QuickBooksAuthException('User not found.');
             }
             
-            // Store the tokens in the user model
+            // Store the tokens
             $user->qb_access_token = $accessTokenObj->getAccessToken();
             $user->qb_refresh_token = $accessTokenObj->getRefreshToken();
             $user->qb_token_expires_at = now()->addSeconds($accessTokenObj->getAccessTokenExpiresIn());
             $user->qb_realm_id = $realmId;
             $user->save();
+
+            // Also store in QuickBooksToken table
+            QuickBooksToken::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'access_token' => $accessTokenObj->getAccessToken(),
+                    'refresh_token' => $accessTokenObj->getRefreshToken(),
+                    'realm_id' => $realmId,
+                    'expires_at' => now()->addSeconds($accessTokenObj->getAccessTokenExpiresIn()),
+                    'refresh_token_expires_at' => now()->addMonths(3), // QuickBooks refresh tokens expire after 100 days
+                ]
+            );
             
             return true;
         } catch (\Exception $e) {

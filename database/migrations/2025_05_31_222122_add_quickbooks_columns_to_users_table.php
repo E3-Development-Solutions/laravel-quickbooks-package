@@ -12,8 +12,8 @@ return new class extends Migration
    public function up()
 {
     Schema::table('users', function (Blueprint $table) {
-        $table->string('qb_access_token')->nullable();
-        $table->string('qb_refresh_token')->nullable();
+        $table->text('qb_access_token')->nullable();
+        $table->text('qb_refresh_token')->nullable();
         $table->timestamp('qb_token_expires_at')->nullable();
         $table->string('qb_realm_id')->nullable();
     });

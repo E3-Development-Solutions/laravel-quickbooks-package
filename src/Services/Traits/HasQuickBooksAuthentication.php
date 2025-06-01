@@ -2,6 +2,7 @@
 
 namespace E3DevelopmentSolutions\QuickBooks\Services\Traits;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Redirect;
 
 trait HasQuickBooksAuthentication
@@ -11,7 +12,7 @@ trait HasQuickBooksAuthentication
      *
      * @return string|null
      */
-    public function getQuickBooksAccessToken()
+    public function getQuickBooksAccessToken(): ?string
     {
         return $this->qb_access_token;
     }
@@ -21,7 +22,7 @@ trait HasQuickBooksAuthentication
      *
      * @return string|null
      */
-    public function getQuickBooksRefreshToken()
+    public function getQuickBooksRefreshToken(): ?string
     {
         return $this->qb_refresh_token;
     }
@@ -31,7 +32,7 @@ trait HasQuickBooksAuthentication
      *
      * @return \Illuminate\Support\Carbon|null
      */
-    public function getQuickBooksTokenExpiresAt()
+    public function getQuickBooksTokenExpiresAt(): ?Carbon
     {
         return $this->qb_token_expires_at;
     }
@@ -41,7 +42,7 @@ trait HasQuickBooksAuthentication
      *
      * @return string|null
      */
-    public function getQuickBooksRealmId()
+    public function getQuickBooksRealmId(): ?string
     {
         return $this->qb_realm_id;
     }
@@ -51,9 +52,12 @@ trait HasQuickBooksAuthentication
      *
      * @return bool
      */
-    public function hasQuickBooksConnection()
+    public function hasQuickBooksConnection(): bool
     {
-        return !empty($this->qb_access_token) && !empty($this->qb_refresh_token) && $this->qb_token_expires_at > now();
+        return !empty($this->qb_access_token) 
+            && !empty($this->qb_refresh_token) 
+            && $this->qb_token_expires_at 
+            && $this->qb_token_expires_at > now();
     }
     
     /**
@@ -61,7 +65,7 @@ trait HasQuickBooksAuthentication
      *
      * @return bool
      */
-    public function isConnectedToQuickBooks()
+    public function isConnectedToQuickBooks(): bool
     {
         return $this->hasQuickBooksConnection();
     }
@@ -71,7 +75,7 @@ trait HasQuickBooksAuthentication
      *
      * @return bool
      */
-    public function disconnectFromQuickBooks()
+    public function disconnectFromQuickBooks(): bool
     {
         $this->qb_access_token = null;
         $this->qb_refresh_token = null;
@@ -81,9 +85,25 @@ trait HasQuickBooksAuthentication
         return $this->save();
     }
 
+    /**
+     * Connect to QuickBooks.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function connectToQuickBooks()
     {
-        // Assumes you have a named route for QuickBooks connect, e.g., 'quickbooks.connect'
         return redirect()->route('quickbooks.connect');
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function getCasts(): array
+    {
+        return array_merge(parent::getCasts(), [
+            'qb_token_expires_at' => 'datetime',
+        ]);
     }
 }
