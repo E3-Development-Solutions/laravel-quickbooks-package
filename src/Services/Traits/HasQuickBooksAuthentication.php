@@ -4,6 +4,7 @@ namespace E3DevelopmentSolutions\QuickBooks\Services\Traits;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Auth;
 
 trait HasQuickBooksAuthentication
 {
@@ -57,7 +58,7 @@ trait HasQuickBooksAuthentication
         return !empty($this->qb_access_token) 
             && !empty($this->qb_refresh_token) 
             && $this->qb_token_expires_at 
-            && $this->qb_token_expires_at > now();
+            && $this->qb_token_expires_at > Carbon::now();
     }
     
     /**
@@ -92,7 +93,7 @@ trait HasQuickBooksAuthentication
      */
     public function connectToQuickBooks()
     {
-        return redirect()->route('quickbooks.connect');
+        return Redirect::route('quickbooks.connect');
     }
 
     /**
@@ -100,7 +101,7 @@ trait HasQuickBooksAuthentication
      *
      * @return array<string, string>
      */
-    protected function getCasts(): array
+    public function getCasts(): array
     {
         return array_merge(parent::getCasts(), [
             'qb_token_expires_at' => 'datetime',
